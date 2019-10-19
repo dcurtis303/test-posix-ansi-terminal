@@ -11,8 +11,8 @@ test_str:
     .asciz      "Test\n"
 
 cursor_position:
-    .byte       1
-    .byte       39
+    .byte       24
+    .byte       24
 
 timespec:
 tv_sec:
@@ -40,16 +40,17 @@ _start_l1:
     callq   setpos
 
     # write test string
-    mov     $test_str,%rax
+    #mov     $test_str,%rax
+    mov     $code_pos+2,%rax
     callq   writestr
 
     callq   nsleep
 
     # change position and loop
     movb    (cursor_position),%al
-    inc     %al
-    cmp     $25,%al
-    jge      exit
+    dec     %al
+    cmp     $1,%al
+    jl      exit
     mov     %al,(cursor_position)
     jmp     _start_l1
 
@@ -72,6 +73,14 @@ setpos:
 
 /*****************************************************************************/
 hex_to_ascii:
+    # clear buffer first
+    std
+    mov     $0x30,%al
+    mov     $3,%rcx
+    rep stosb
+    cld
+    add     $3,%rdi
+
     xor     %rax,%rax
     movb    (%rsi),%al
     mov     $10,%bx
@@ -79,7 +88,6 @@ hex_to_ascii:
 hex_to_ascii_more:
     xor     %rdx,%rdx
     div     %bx
-    jz      hex_to_ascii_done
     
     add     $0x30,%dl
     movb    %dl,(%rdi)
@@ -127,7 +135,7 @@ getstrlen_ret:
 nsleep:
     movq    $35,%rax
     movq    $0,(tv_sec)
-    movq    $330000000,(tv_nsec)
+    movq    $50000000,(tv_nsec)
     movq    $timespec,%rdi
     xor     %rsi,%rsi
     syscall
