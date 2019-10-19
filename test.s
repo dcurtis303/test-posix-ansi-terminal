@@ -2,17 +2,17 @@
     .data
 code_clrscrn:
     .asciz      "\033[2J"
-    .balign     8
+    .balign     16
 code_pos:
     .asciz      "\033[000;000H"
-    .balign     8
+    .balign     16
 
 test_str:
     .asciz      "Test\n"
 
 cursor_position:
-    .byte       215
-    .byte       20
+    .byte       1
+    .byte       39
 
 timespec:
 tv_sec:
@@ -35,14 +35,23 @@ _start:
     mov     $code_clrscrn,%rax
     callq   writestr
 
+_start_l1:
     # set cursor position
     callq   setpos
 
-
+    # write test string
     mov     $test_str,%rax
     callq   writestr
 
-    jmp     exit
+    callq   nsleep
+
+    # change position and loop
+    movb    (cursor_position),%al
+    inc     %al
+    cmp     $25,%al
+    jge      exit
+    mov     %al,(cursor_position)
+    jmp     _start_l1
 
 
 /*****************************************************************************/
@@ -66,20 +75,20 @@ hex_to_ascii:
     xor     %rax,%rax
     movb    (%rsi),%al
     mov     $10,%bx
+
 hex_to_ascii_more:
     xor     %rdx,%rdx
     div     %bx
+    jz      hex_to_ascii_done
+    
     add     $0x30,%dl
-
     movb    %dl,(%rdi)
     dec     %rdi
 
     cmp     $0,%al
     jg      hex_to_ascii_more
 
-    add     $0x30,%dl
-    movb    %dl,(%rdi)
-
+hex_to_ascii_done:
     retq
 
 
@@ -104,7 +113,7 @@ getstrlen:
     xor     %rax,%rax
     xor     %rcx,%rcx
 getstrlen_cmp:
-    cmpb    (%rbx,%rcx,1),%al
+    cmpb    $0,(%rbx,%rcx,1) #%al
     je      getstrlen_ret
     inc     %rcx
     jmp     getstrlen_cmp
@@ -118,7 +127,7 @@ getstrlen_ret:
 nsleep:
     movq    $35,%rax
     movq    $0,(tv_sec)
-    movq    $33000,(tv_nsec)
+    movq    $330000000,(tv_nsec)
     movq    $timespec,%rdi
     xor     %rsi,%rsi
     syscall
